@@ -3,45 +3,53 @@
 This file contains Mermaid diagrams for each section of **Chapter 8: The Model Context Protocol (MCP)**.
 Each diagram is self-contained and can be dropped directly into the corresponding section of the manuscript.
 
+> **Diagram status:** 7 diagrams retained for print. Changes from v1:
+> - **8.1a** — LLM node reframed as stateless/no-undo; irreversibility callout added
+> - **8.4c** — Replaced state diagram with a prose-ready tool/return-value reference table
+> - **8.4d** — Collapsed 4 redundant tool nodes into one; mechanism annotation added
+> - **8.5** — Mindmap replaced with MCP enforcement boundary table (sets up Ch. 9 & Ch. 14)
+
 ---
 
 ## Section 8.1 — Why Tool Use Needs a Standard Boundary
 
-> **Diagram 8.1a — The Problem: No Standard, No Safety**
+> **Diagram 8.1a — The Problem: No Standard Boundary**
 >
-> Shows what happens when agents call tools directly without a protocol boundary —
-> each integration is bespoke, there is no validation, and the model can trigger
-> anything. Use this as the "before" picture to motivate MCP.
+> The "before" picture. An LLM that is stateless and has no undo button
+> calls tools directly with bespoke code and no schema validation.
+> Every call to a write-capable tool is a potential irreversible action.
+> Use this to motivate why a standard protocol boundary is non-negotiable
+> in production — connecting directly to §1.1 ("no undo button").
 
 ```mermaid
 flowchart TD
     U(["👤 User"])
-    LLM["LLM\n(no boundary)"]
-    T1["Tool A\nWeather API"]
-    T2["Tool B\nDatabase\n(direct write)"]
-    T3["Tool C\nSmart Plug\n(raw TCP)"]
-    T4["Tool D\nFile System\n(unrestricted)"]
+    LLM["LLM\nStateless · No undo\nNo validation"]
+    T1["Tool A\nRead-only API\n(low risk)"]
+    T2["Tool B\nDatabase\ndirect write"]
+    T3["Tool C\nSmart Plug\nraw TCP"]
+    T4["Tool D\nFile System\nunrestricted"]
+    WARN["⚠️ Every tool call is\npotentially irreversible\nNo schema · No boundary\nNo rollback"]
 
     U -->|natural language| LLM
-    LLM -->|custom code, no schema| T1
-    LLM -->|custom code, no schema| T2
-    LLM -->|custom code, no schema| T3
-    LLM -->|custom code, no schema| T4
+    LLM -->|"bespoke code\nno schema"| T1
+    LLM -->|"bespoke code\nno schema"| T2
+    LLM -->|"bespoke code\nno schema"| T3
+    LLM -->|"bespoke code\nno schema"| T4
+    T2 & T3 & T4 --> WARN
 
     style LLM fill:#f87171,color:#fff
-    style T2 fill:#fbbf24
-    style T3 fill:#fbbf24
-    style T4 fill:#fbbf24
-
-    classDef problem stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5
-    class T2,T3,T4 problem
+    style T2 fill:#fbbf24,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5
+    style T3 fill:#fbbf24,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5
+    style T4 fill:#fbbf24,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5
+    style WARN fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#b91c1c
 ```
 
 > **Diagram 8.1b — The Solution: MCP as a Standard Boundary**
 >
-> Shows the same scenario after MCP is introduced. Every tool is registered
-> on an MCP server. The model only sees named tools with documented schemas;
-> it cannot bypass the boundary.
+> The "after" picture. Every tool is registered on an MCP server.
+> The model only sees named tools with documented schemas;
+> it cannot bypass the boundary or reach external systems directly.
 
 ```mermaid
 flowchart TD
@@ -78,9 +86,10 @@ flowchart TD
 
 > **Diagram 8.2a — How FastMCP Generates a JSON Schema from Python Type Hints**
 >
-> Illustrates the compile-time path from a Python function signature to
-> the JSON Schema the model receives. Use this to explain why the model
-> can never pass a wrong type.
+> The path from a Python function signature to the JSON Schema the model
+> receives at startup. FastMCP introspects type hints and docstrings automatically —
+> the model can never pass a wrong type because the schema is enforced
+> before execution, not after.
 
 ```mermaid
 flowchart LR
@@ -103,9 +112,11 @@ flowchart LR
 
 > **Diagram 8.2b — Bounded Execution: What the Model Can and Cannot Do**
 >
-> Shows the execution boundary enforced by the smart home server.
+> The execution boundary enforced by the smart home server.
 > The model can call exactly the four exposed tools; it cannot discover
-> other devices, change the target IP, or access the network directly.
+> other devices, change the target IP, or reach the network directly.
+> The device IP is server-controlled, loaded from the environment — the
+> model never sees it.
 
 ```mermaid
 flowchart TD
@@ -146,9 +157,11 @@ flowchart TD
 
 > **Diagram 8.3 — Safe External API Gateway Pattern**
 >
-> Shows how the MCP server acts as an API gateway. The model supplies
-> only user-facing arguments; the server handles auth, caps, parsing,
-> and error handling before returning a clean structured response.
+> The MCP server acts as an API gateway. The model supplies only
+> user-facing arguments; the server owns auth, caps, parsing, and error
+> handling before returning a clean structured response.
+> Three safety annotations are shown inline: env-only keys, trimmed
+> payloads, and server-side result caps.
 
 ```mermaid
 sequenceDiagram
@@ -190,8 +203,9 @@ sequenceDiagram
 
 > **Diagram 8.4a — End-to-End Architecture**
 >
-> The full system diagram referenced in the Medium article. Shows every
-> layer: user → agent → MCP client → MCP server → python-kasa → physical device.
+> The full system: two separate processes connected over HTTP via the MCP
+> protocol. The agent process never imports python-kasa; the server process
+> never imports LangGraph. The `.env` file is the only shared secret surface.
 
 ```mermaid
 flowchart TD
@@ -236,9 +250,10 @@ flowchart TD
 
 > **Diagram 8.4b — Step-by-Step Request Lifecycle**
 >
-> Derived from the Medium article's "Automation Play-by-Play" section.
-> Maps each of the six numbered steps in the article to a sequence diagram.
-> Use this alongside the code walkthrough in section 8.4.
+> Derived from the Medium article's play-by-play.
+> Maps the six numbered steps to every participant in the stack.
+> Use this alongside the code walkthrough in §8.4 to show
+> exactly where the MCP protocol boundary sits in the call chain.
 
 ```mermaid
 sequenceDiagram
@@ -277,107 +292,75 @@ sequenceDiagram
     Agent-->>User: "The Smart Plug is now on."
 ```
 
-> **Diagram 8.4c — Four-Step Agent Workflow (Client Test Sequence)**
+> **Diagram 8.4c — Four-Step Workflow: Tool Calls and Return Values**
 >
-> Maps directly to the four `agent.ainvoke()` calls in `client_kasa_workflow.py`.
-> Use this to preview the demo output readers will see when they run the code.
+> Reference table for the four `agent.ainvoke()` calls in
+> `client_kasa_workflow.py`. Use inline in the manuscript when walking
+> through the demo — faster to read than a state diagram for a linear sequence.
 
-```mermaid
-stateDiagram-v2
-    direction LR
-
-    [*] --> Step1
-
-    Step1 : STEP 1\nList devices
-    Step1 : → list_smart_devices()
-    Step1 : ← [Smart Plug, is_on: ?]
-
-    Step2 : STEP 2\nTurn ON
-    Step2 : → turn_device_on()
-    Step2 : ← {is_on: true, status: success}
-
-    Step3 : STEP 3\nStatus check
-    Step3 : → get_device_status()
-    Step3 : ← {is_on: true}\n(no state change)
-
-    Step4 : STEP 4\nTurn OFF
-    Step4 : → turn_device_off()
-    Step4 : ← {is_on: false, status: success}
-
-    Step1 --> Step2
-    Step2 --> Step3
-    Step3 --> Step4
-    Step4 --> [*]
-```
+| Step | User instruction | Tool called | Return value |
+|------|-----------------|-------------|--------------|
+| 1 | "List all smart home devices" | `list_smart_devices()` | `[{alias, is_on: ?, host}]` |
+| 2 | "Turn on the Smart Plug" | `turn_device_on()` | `{alias, is_on: true, status: success}` |
+| 3 | "What is the status?" | `get_device_status()` | `{alias, is_on: true, status: success}` |
+| 4 | "Turn off the Smart Plug" | `turn_device_off()` | `{alias, is_on: false, status: success}` |
 
 > **Diagram 8.4d — MCP Tool Registration and Discovery**
 >
-> Shows how tools move from Python `@mcp.tool()` decorators on the server
-> to the agent's available tool list at runtime. Use this to explain
-> the "convention over configuration" design of FastMCP.
+> How `@mcp.tool()` decorators become a runtime tool manifest and
+> reach the agent. The key insight is that FastMCP's introspection
+> mechanism — not manual wiring — generates the JSON Schema for each
+> tool automatically at server startup (convention over configuration).
 
 ```mermaid
 flowchart LR
     subgraph SERVER ["kasa_smart_home_server.py"]
-        D1["@mcp.tool()\nlist_smart_devices"]
-        D2["@mcp.tool()\nturn_device_on"]
-        D3["@mcp.tool()\nturn_device_off"]
-        D4["@mcp.tool()\nget_device_status"]
+        DECS["@mcp.tool() decorators\n(4 tools registered)\nlist_smart_devices\nturn_device_on\nturn_device_off\nget_device_status"]
+        INTROSPECT["FastMCP introspection\nat server startup:\nreads type hints + docstrings\ngenerates JSON Schema per tool"]
+        DECS -->|"decoration"| INTROSPECT
     end
 
     subgraph REGISTRY ["FastMCP Tool Registry"]
-        R["Internal tool manifest\n(name + JSON Schema\nper tool)"]
+        R["Tool manifest\n{ name, description,\n  inputSchema } × 4"]
     end
 
     subgraph CLIENT ["client_kasa_workflow.py"]
-        GE["client.get_tools()"]
+        GE["client.get_tools()\n(fetches manifest at runtime)"]
         AGENT["create_react_agent\n(model, tools=tools)"]
-        GE --> AGENT
+        GE -->|"LangChain tool wrappers"| AGENT
     end
 
-    D1 & D2 & D3 & D4 -->|"registered at\nserver startup"| R
-    R -->|"served at GET /mcp\n(tool list + schemas)"| GE
+    INTROSPECT -->|"stored in registry"| R
+    R -->|"served at GET /mcp"| GE
 
     style SERVER fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
     style REGISTRY fill:#dcfce7,stroke:#16a34a
     style CLIENT fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
     style AGENT fill:#3b82f6,color:#fff
+    style INTROSPECT fill:#bbf7d0
 ```
 
 ---
 
-## Section 8.5 — Summary Diagram
+## Section 8.5 — Summary
 
-> **Diagram 8.5 — Chapter 8 Concept Map**
+> **Diagram 8.5 — What MCP Enforces vs. What It Does Not**
 >
-> A single capstone diagram that ties together all four sections.
-> Use as the closing visual in the chapter summary.
+> A capstone reference table for the chapter summary.
+> Use this instead of a prose list to give readers a crisp mental model
+> before they move to Chapter 9 (Plant Doctor case study) and
+> Chapter 14 (fail-closed design patterns), both of which build directly
+> on the boundaries introduced here.
 
-```mermaid
-mindmap
-  root((MCP))
-    Standard Boundary
-      Replaces bespoke integrations
-      Model sees tool names only
-      No direct system access
-    Three Primitives
-      Tools
-        Model-callable actions
-        Auto JSON Schema from type hints
-      Resources
-        Read-only URI-addressable data
-        notes://latest
-      Prompts
-        Reusable prompt templates
-        Server controls framing
-    Safe External Connections
-      API keys in env only
-      Trimmed response payloads
-      Server-side result caps
-    Smart Plug Example
-      FastMCP server
-      streamable-http transport
-      python-kasa SDK
-      LangGraph ReAct agent
-      MultiServerMCPClient
-```
+| Dimension | What MCP enforces | What MCP does NOT enforce |
+|-----------|-------------------|---------------------------|
+| **Tool discovery** | Model sees only registered, named tools with schemas | Whether those tools are safe to call |
+| **Argument types** | FastMCP validates types before execution | Business logic correctness of the arguments |
+| **Auth / secrets** | API keys and device IPs live in env, never exposed to model | Rotation, expiry, or revocation of those secrets |
+| **Execution scope** | Model cannot call tools outside the registered set | What the registered tools themselves can do |
+| **Response shape** | Server controls what fields are returned to the model | Whether the model interprets those fields correctly |
+| **Irreversibility** | Bounded — model cannot pick arbitrary targets | MCP does not add undo/rollback to write operations |
+
+> 💡 **The gap in the last row is the bridge to Chapter 14.** MCP enforces *who* can call *what* —
+> but it does not make write operations safe to retry or rollback. That requires
+> the idempotency and fail-closed patterns covered in Part 4.

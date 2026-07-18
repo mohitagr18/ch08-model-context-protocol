@@ -32,14 +32,11 @@ cp .env.example .env
 Open `.env` and fill in at minimum one LLM key:
 
 ```dotenv
-# Pick one — see API Keys table below for where to get each
-OPENAI_API_KEY="your_openai_key_here"  # default
-GROQ_API_KEY="your_groq_key_here"      # default
-NVIDIA_API_KEY="your_nvidia_key_here"  # fallback if Groq hits rate limits
+# Pick one — see API Keys table below for where to get it
+OPENAI_API_KEY="your_openai_key_here"
 ```
 
-The client auto-selects the provider: Groq is used if `GROQ_API_KEY` is set;
-if only `NVIDIA_API_KEY` is set, it switches to `ChatNVIDIA` automatically.
+The client uses OpenAI by default when `OPENAI_API_KEY` is set.
 
 ---
 
@@ -112,16 +109,11 @@ ch08-model-context-protocol/
 
 | Key | Needed for | Free tier | Where to get it |
 |---|---|---|---|
-| `GROQ_API_KEY` | Agent client — default LLM | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
-| `NVIDIA_API_KEY` | Agent client — fallback LLM | Yes — free credits | [build.nvidia.com](https://build.nvidia.com) → sign in → Get API Key |
+| `OPENAI_API_KEY` | Agent client — default LLM | Yes | [platform.openai.com](https://platform.openai.com/) → API Keys |
 | `WEATHER_API_KEY` | §8.3 external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
 | `NEWS_API_KEY` | §8.3 external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
 | `KASA_DEVICE_IP` | Option B only | N/A | See below |
 | `KASA_DEVICE_ALIAS` | Option B only | N/A | See below |
-
-> **Groq vs NVIDIA:** set `GROQ_API_KEY` for normal use. If you hit Groq’s
-> rate limit, add `NVIDIA_API_KEY` to `.env` and remove or comment out `GROQ_API_KEY`.
-> The client switches providers automatically — no code change needed.
 
 ---
 

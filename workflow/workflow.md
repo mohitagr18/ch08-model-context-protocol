@@ -199,9 +199,7 @@ sequenceDiagram
 > The full system: two separate processes connected over HTTP via the MCP
 > protocol. The agent process never imports python-kasa; the server process
 > never imports LangGraph. The `.env` file is the only shared secret surface.
-> The client auto-selects the LLM provider at startup: ChatGroq if
-> `GROQ_API_KEY` is set, ChatNVIDIA (llama-3.1-nemotron-nano-8b-v1) if
-> only `NVIDIA_API_KEY` is set.
+> The client uses ChatOpenAI when `OPENAI_API_KEY` is set.
 
 ```mermaid
 flowchart TD
@@ -209,7 +207,7 @@ flowchart TD
 
     subgraph AGENT_SIDE ["Agent Process (client_kasa_workflow.py)"]
         direction TB
-        LLM["LLM — auto-selected at startup\nGroq: llama-3.1-8b-instant\nNVIDIA: llama-3.1-nemotron-nano-8b-v1"]
+        LLM["LLM — OpenAI at startup\ngpt-5.4-nano"]
         REACT["LangGraph\nReAct Agent"]
         MCPC["MultiServerMCPClient\nhttp://localhost:8000/mcp"]
         LLM <--> REACT
@@ -228,7 +226,7 @@ flowchart TD
     end
 
     PLUG["\ud83d\udd0c TP-Link Kasa\nSmart Plug\n(local network)"]
-    ENV[".env\nKASA_DEVICE_IP\nGROQ_API_KEY or NVIDIA_API_KEY"]
+    ENV[".env\nKASA_DEVICE_IP\nOPENAI_API_KEY"]
 
     U -->|"Natural language command"| REACT
     MCPC <-->|"HTTP — MCP protocol"| FASTMCP
@@ -256,7 +254,7 @@ flowchart TD
 sequenceDiagram
     actor User
     participant Agent as ReAct Agent<br/>(client_kasa_workflow.py)
-    participant LLM as LLM<br/>(Groq or NVIDIA)
+    participant LLM as LLM<br/>(OpenAI)
     participant MCPClient as MultiServerMCPClient
     participant MCPServer as FastMCP Server
     participant Kasa as python-kasa SDK

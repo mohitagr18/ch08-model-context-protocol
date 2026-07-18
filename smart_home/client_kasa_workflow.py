@@ -2,9 +2,8 @@
 #
 # LangGraph ReAct agent that controls a smart plug via the MCP server.
 #
-# LLM provider is selected by which key is present in .env:
-#   GROQ_API_KEY   → ChatGroq  (default, llama-3.1-8b-instant)
-#   NVIDIA_API_KEY → ChatNVIDIA (fallback, nvidia/llama-3.1-nemotron-nano-8b-v1)
+# LLM provider is selected by OPENAI_API_KEY in .env:
+#   OPENAI_API_KEY → ChatOpenAI  (default, gpt-5.4-nano)
 #
 # Requires the MCP server to be running first:
 #   python smart_home/mock_kasa_server.py        (no hardware)
@@ -32,8 +31,6 @@ load_dotenv(dotenv_path=dotenv_path)
 
 def _build_llm():
     openai_key = os.getenv("OPENAI_API_KEY")
-    groq_key = os.getenv("GROQ_API_KEY")
-    nvidia_key = os.getenv("NVIDIA_API_KEY")
 
     if openai_key:
         from langchain_openai import ChatOpenAI
@@ -41,19 +38,8 @@ def _build_llm():
         print(f"LLM : ChatOpenAI — {model}")
         return ChatOpenAI(model=model, api_key=openai_key, timeout=60, max_retries=2)
 
-    if groq_key:
-        from langchain_groq import ChatGroq
-        print("LLM : ChatGroq — llama-3.1-8b-instant")
-        return ChatGroq(model="llama-3.1-8b-instant", api_key=groq_key)
-
-    if nvidia_key:
-        from langchain_nvidia_ai_endpoints import ChatNVIDIA
-        model = "nvidia/llama-3.1-nemotron-nano-8b-v1"
-        print(f"LLM : ChatNVIDIA — {model}")
-        return ChatNVIDIA(model=model, api_key=nvidia_key, timeout=60)
-
     print("ERROR: No LLM API key found in .env.")
-    print("       Set OPENAI_API_KEY, GROQ_API_KEY, or NVIDIA_API_KEY and try again.")
+    print("       Set OPENAI_API_KEY and try again.")
     sys.exit(1)
 
 
@@ -104,8 +90,8 @@ async def _run_step(agent, step_num: int, label: str, message: str):
         _print_result(result)
     except asyncio.TimeoutError:
         _log(f"  ERROR: Step {step_num} timed out after {STEP_TIMEOUT_SECONDS} seconds.")
-        _log("  Hint: the NVIDIA chat endpoint may be slow or unreachable.")
-        _log("  Suggestion: verify NVIDIA_API_KEY, network access, or use GROQ_API_KEY instead.")
+        _log("  Hint: the OpenAI endpoint may be slow or unreachable.")
+        _log("  Suggestion: verify OPENAI_API_KEY and network access.")
         raise
     except Exception as exc:
         _log(f"  ERROR: Step {step_num} failed: {type(exc).__name__}: {exc}")

@@ -23,30 +23,22 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 uv sync
 ```
 
-This reads `pyproject.toml`, creates a `.venv` in the project root, and installs everything in one step.
-
 **1c. Copy the environment file and add your keys**
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and fill in:
+Open `.env` and fill in at minimum one LLM key:
 
 ```dotenv
-# Minimum required to run the mock workflow (no hardware needed)
-GROQ_API_KEY="your_groq_key_here"
-
-# Required only for Section 8.3 external tools
-WEATHER_API_KEY="your_weatherapi_key_here"
-NEWS_API_KEY="your_newsapi_key_here"
-
-# Required only for Section 8.4 with a real Kasa plug
-KASA_DEVICE_IP="192.168.1.42"
-KASA_DEVICE_ALIAS="Smart Plug"
+# Pick one — see API Keys table below for where to get each
+GROQ_API_KEY="your_groq_key_here"      # default
+NVIDIA_API_KEY="your_nvidia_key_here"  # fallback if Groq hits rate limits
 ```
 
-Where to get each key — see [API Keys](#api-keys) at the end of this file.
+The client auto-selects the provider: Groq is used if `GROQ_API_KEY` is set;
+if only `NVIDIA_API_KEY` is set, it switches to `ChatNVIDIA` automatically.
 
 ---
 
@@ -54,7 +46,7 @@ Where to get each key — see [API Keys](#api-keys) at the end of this file.
 
 ### Option A — No hardware (mock smart plug)
 
-Use this if you don’t have a physical Kasa plug. Only `GROQ_API_KEY` is needed.
+Use this if you don’t have a physical Kasa plug.
 
 **Terminal 1:**
 ```bash
@@ -119,11 +111,16 @@ ch08-model-context-protocol/
 
 | Key | Needed for | Free tier | Where to get it |
 |---|---|---|---|
-| `GROQ_API_KEY` | Agent client (both options) | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
+| `GROQ_API_KEY` | Agent client — default LLM | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
+| `NVIDIA_API_KEY` | Agent client — fallback LLM | Yes — free credits | [build.nvidia.com](https://build.nvidia.com) → sign in → Get API Key |
 | `WEATHER_API_KEY` | §8.3 external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
 | `NEWS_API_KEY` | §8.3 external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
 | `KASA_DEVICE_IP` | Option B only | N/A | See below |
 | `KASA_DEVICE_ALIAS` | Option B only | N/A | See below |
+
+> **Groq vs NVIDIA:** set `GROQ_API_KEY` for normal use. If you hit Groq’s
+> rate limit, add `NVIDIA_API_KEY` to `.env` and remove or comment out `GROQ_API_KEY`.
+> The client switches providers automatically — no code change needed.
 
 ---
 

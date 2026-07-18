@@ -1,141 +1,115 @@
 # client_kasa_workflow.py
 #
-# Section 8.4 — Building an MCP server with a smart plug example
+# LangGraph ReAct agent that controls a smart plug via the MCP server.
 #
-# This script is the CLIENT side of the Chapter 8 smart home example.
-# It connects to the running KasaSmartHomeServer via streamable-http,
-# wraps the MCP tools into a LangGraph ReAct agent, and runs a
-# four-step demonstration workflow:
+# LLM provider is selected by which key is present in .env:
+#   GROQ_API_KEY   → ChatGroq  (default, llama-3.1-8b-instant)
+#   NVIDIA_API_KEY → ChatNVIDIA (fallback, nvidia/llama-3.1-nemotron-nano-8b-v1)
 #
-#   Step 1 — List available smart devices
-#   Step 2 — Turn the plug on
-#   Step 3 — Check its current status (no state change)
-#   Step 4 — Turn the plug off
-#
-# Prerequisites:
-#   - kasa_smart_home_server.py must be running in a separate terminal
-#   - GROQ_API_KEY must be set in .env
-#
-# Run with:  python smart_home/client_kasa_workflow.py
+# Requires the MCP server to be running first:
+#   python smart_home/mock_kasa_server.py        (no hardware)
+#   python smart_home/kasa_smart_home_server.py  (real plug)
 
 # ==============================================================================
 # SECTION 1: IMPORTS
 # ==============================================================================
-from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_groq import ChatGroq
-from langgraph.prebuilt import create_react_agent
 import asyncio
 import os
 import sys
 from dotenv import load_dotenv
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
 
 load_dotenv()
 
 # ==============================================================================
-# SECTION 2: ENVIRONMENT VALIDATION
+# SECTION 2: LLM SELECTION
+# Auto-selects provider based on which API key is present in .env.
 # ==============================================================================
-groq_api_key = os.getenv("GROQ_API_KEY")
-if not groq_api_key:
-    print("CRITICAL ERROR: GROQ_API_KEY is not set.")
-    print("Add GROQ_API_KEY=<your_key> to your .env file and restart.")
+
+def _build_llm():
+    groq_key = os.getenv("GROQ_API_KEY")
+    nvidia_key = os.getenv("NVIDIA_API_KEY")
+
+    if groq_key:
+        from langchain_groq import ChatGroq
+        print("LLM : ChatGroq — llama-3.1-8b-instant")
+        return ChatGroq(model="llama-3.1-8b-instant", api_key=groq_key)
+
+    if nvidia_key:
+        from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        model = "nvidia/llama-3.1-nemotron-nano-8b-v1"
+        print(f"LLM : ChatNVIDIA — {model}")
+        return ChatNVIDIA(model=model, api_key=nvidia_key)
+
+    print("ERROR: No LLM API key found in .env.")
+    print("       Set GROQ_API_KEY or NVIDIA_API_KEY and try again.")
     sys.exit(1)
-os.environ["GROQ_API_KEY"] = groq_api_key
-
-# The alias we expect the server to report — used only for readable log messages.
-DEVICE_ALIAS = os.getenv("KASA_DEVICE_ALIAS", "Smart Plug")
 
 
 # ==============================================================================
-# SECTION 3: HELPER — PRINT AGENT RESPONSE
+# SECTION 3: HELPERS
 # ==============================================================================
 
-def _print_step(step_label: str, response: dict) -> None:
-    """Extract and print the agent's final message for a workflow step."""
-    final_message = response["messages"][-1].content
-    print(f"\n{'='*60}")
-    print(f"  {step_label}")
-    print(f"{'='*60}")
-    print(final_message)
+MCP_SERVER_URL = "http://localhost:8000/mcp"
 
+def _print_step(n: int, label: str) -> None:
+    print(f"\n{'='*55}")
+    print(f"  STEP {n}: {label}")
+    print(f"{'='*55}")
 
-# ==============================================================================
-# SECTION 4: MAIN WORKFLOW
-# ==============================================================================
-
-async def main() -> None:
-    print("STATUS: Initializing client workflow...")
-
-    # ------------------------------------------------------------------
-    # Connect to the MCP server via MultiServerMCPClient.
-    # The client discovers tools automatically — no manual wiring needed.
-    # ------------------------------------------------------------------
-    client = MultiServerMCPClient(
-        {
-            "kasa_home": {
-                "transport": "streamable_http",
-                "url": "http://localhost:8000/mcp",
-            }
-        }
-    )
-
-    print("STATUS: Fetching tools from MCP server...")
-    tools = await client.get_tools()
-    if not tools:
-        print("ERROR: No tools retrieved. Is kasa_smart_home_server.py running?")
-        sys.exit(1)
-
-    print(f"STATUS: {len(tools)} tool(s) available:")
-    for t in tools:
-        print(f"  - {t.name}: {t.description}")
-
-    # ------------------------------------------------------------------
-    # Build the ReAct agent.
-    # The agent receives the MCP tools and the LLM — nothing more.
-    # It decides which tools to call and in what order.
-    # ------------------------------------------------------------------
-    print("\nSTATUS: Building ReAct agent (ChatGroq / llama-3.1-8b-instant)...")
-    model = ChatGroq(model="llama-3.1-8b-instant")
-    agent = create_react_agent(model=model, tools=tools)
-    print("STATUS: Agent ready.\n")
-
-    # ------------------------------------------------------------------
-    # STEP 1: List all available devices
-    # ------------------------------------------------------------------
-    step1 = await agent.ainvoke(
-        {"messages": [{"role": "user", "content": "List all the smart home devices you can control. Do not include IP addresses."}]}
-    )
-    _print_step("STEP 1 — List devices", step1)
-
-    # ------------------------------------------------------------------
-    # STEP 2: Turn the plug ON
-    # ------------------------------------------------------------------
-    step2 = await agent.ainvoke(
-        {"messages": [{"role": "user", "content": f"Turn on the smart plug called '{DEVICE_ALIAS}'."}]}
-    )
-    _print_step(f"STEP 2 — Turn ON '{DEVICE_ALIAS}'", step2)
-
-    # ------------------------------------------------------------------
-    # STEP 3: Check status (read-only — no state change)
-    # ------------------------------------------------------------------
-    step3 = await agent.ainvoke(
-        {"messages": [{"role": "user", "content": f"What is the current power status of '{DEVICE_ALIAS}'? Do not change its state."}]}
-    )
-    _print_step(f"STEP 3 — Status check for '{DEVICE_ALIAS}'", step3)
-
-    # ------------------------------------------------------------------
-    # STEP 4: Turn the plug OFF
-    # ------------------------------------------------------------------
-    step4 = await agent.ainvoke(
-        {"messages": [{"role": "user", "content": f"Turn off the smart plug called '{DEVICE_ALIAS}'."}]}
-    )
-    _print_step(f"STEP 4 — Turn OFF '{DEVICE_ALIAS}'", step4)
-
-    print("\nSTATUS: Workflow complete.")
-
+def _print_result(messages) -> None:
+    for msg in messages["messages"]:
+        if hasattr(msg, "content") and msg.content:
+            print(f"  Agent: {msg.content}")
 
 # ==============================================================================
-# SECTION 5: SCRIPT ENTRY POINT
+# SECTION 4: AGENT WORKFLOW
+# ==============================================================================
+
+async def run_workflow():
+    print("\nStarting Kasa Smart Home Agent Workflow")
+    print(f"Server : {MCP_SERVER_URL}")
+
+    llm = _build_llm()
+
+    async with MultiServerMCPClient(
+        {"kasa_home": {"transport": "streamable_http", "url": MCP_SERVER_URL}}
+    ) as client:
+        tools = await client.get_tools()
+        agent = create_react_agent(llm, tools)
+
+        _print_step(1, "List all smart home devices")
+        result = await agent.ainvoke(
+            {"messages": [{"role": "user", "content": "List all available smart home devices."}]}
+        )
+        _print_result(result)
+
+        _print_step(2, "Turn the Smart Plug ON")
+        result = await agent.ainvoke(
+            {"messages": [{"role": "user", "content": "Turn on the Smart Plug."}]}
+        )
+        _print_result(result)
+
+        _print_step(3, "Check the current status")
+        result = await agent.ainvoke(
+            {"messages": [{"role": "user", "content": "What is the current status of the Smart Plug?"}]}
+        )
+        _print_result(result)
+
+        _print_step(4, "Turn the Smart Plug OFF")
+        result = await agent.ainvoke(
+            {"messages": [{"role": "user", "content": "Turn off the Smart Plug."}]}
+        )
+        _print_result(result)
+
+    print(f"\n{'='*55}")
+    print("  Workflow complete.")
+    print(f"{'='*55}\n")
+
+# ==============================================================================
+# SECTION 5: ENTRY POINT
 # ==============================================================================
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_workflow())

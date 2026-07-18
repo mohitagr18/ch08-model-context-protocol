@@ -73,7 +73,7 @@ Then edit `.env` with your keys (see the **API Keys** section below).
 | `GROQ_API_KEY` | 8.4 client | Yes — generous free tier | [console.groq.com](https://console.groq.com) → API Keys → Create key |
 | `WEATHER_API_KEY` | 8.3 | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
 | `NEWS_API_KEY` | 8.3 | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
-| `KASA_DEVICE_IP` | 8.4 real server only | N/A — your device | Router admin panel (assign a static IP) |
+| `KASA_DEVICE_IP` | 8.4 real server only | N/A — your device | See [Finding Your Kasa Device IP](#finding-your-kasa-device-ip) below |
 
 > **Minimum to get started:** only `GROQ_API_KEY` is needed to run the Section 8.4 mock workflow end-to-end. No hardware required.
 
@@ -173,17 +173,16 @@ Output is identical to the real plug — the agent cannot tell the difference.
 #### 🔌 Path B — Real Kasa plug
 
 Use this path once you have a physical TP-Link Kasa smart plug on your local network.
+If you need help finding your device IP or alias, see
+[Finding Your Kasa Device IP](#finding-your-kasa-device-ip) at the end of this file.
 
-**Step 1 — Find your plug’s IP address:**
-- Open your router’s admin panel (usually `192.168.1.1` or `192.168.0.1`)
-- Find the Kasa device in the connected devices list
-- Assign it a **static/reserved IP** so it doesn’t change between sessions
+**Step 1 — Find your plug’s IP and alias** — see [Finding Your Kasa Device IP](#finding-your-kasa-device-ip).
 
 **Step 2 — Add all required keys to `.env`:**
 ```dotenv
 GROQ_API_KEY="your_groq_key_here"
 KASA_DEVICE_IP="192.168.1.42"        # replace with your plug's IP
-KASA_DEVICE_ALIAS="Smart Plug"       # label shown in agent output
+KASA_DEVICE_ALIAS="Smart Plug"       # replace with your plug's alias
 ```
 
 **Step 3 — Terminal 1: start the real MCP server:**
@@ -214,3 +213,74 @@ You will see the physical plug respond to each command in real time.
 - **Transport modes**: `stdio` (Claude Desktop) vs. `streamable-http` (networked agents)
 - **LangGraph + MCP**: Wrapping MCP tools in a ReAct agent via `langchain_mcp_adapters`
 - **Mock testing**: Validating the full MCP stack without hardware using an in-memory server
+
+---
+
+## Finding Your Kasa Device IP
+
+This section explains how to find your TP-Link Kasa plug’s IP address and alias
+and set a static IP so it doesn’t change between sessions.
+
+### Option 1 — Use the Kasa mobile app (easiest)
+
+1. Open the **Kasa Smart** app on your phone
+2. Tap the plug device you want to use
+3. Tap the **gear icon** (⚙️) in the top-right corner to open device settings
+4. Scroll down to **Device Info**
+5. Note the **IP Address** and **Device Name** (this is your alias)
+
+> The device name shown in the Kasa app is the value to use for `KASA_DEVICE_ALIAS`.
+
+### Option 2 — Use python-kasa discovery (no app needed)
+
+python-kasa ships with a discovery CLI that scans your local network and
+prints every Kasa device it finds, including IP and alias:
+
+```bash
+# Install python-kasa if not already installed
+pip install python-kasa
+
+# Run discovery (scans the local subnet automatically)
+python -m kasa discover
+```
+
+Example output:
+```
+Discovering devices on 255.255.255.255 for 3 seconds
+
+Found device: Smart Plug
+        Host: 192.168.1.42
+       Alias: Smart Plug
+       Model: EP10(US)
+  HW version: 1.0
+  SW version: 1.0.13
+   Is on    : False
+```
+
+Copy the `Host` value into `KASA_DEVICE_IP` and the `Alias` value into `KASA_DEVICE_ALIAS`.
+
+### Option 3 — Check your router admin panel
+
+1. Open a browser and go to your router’s admin panel
+   (usually `http://192.168.1.1` or `http://192.168.0.1` — check the label on your router)
+2. Log in with your router credentials
+3. Find the **Connected Devices** or **DHCP Client List** section
+4. Look for a device named something like `TP-LINK_Power Strip` or `Kasa`
+5. Note its current IP address
+
+### Assigning a Static IP (recommended)
+
+By default, your router assigns a new IP to the plug each time it reconnects.
+A static IP ensures the plug is always reachable at the same address.
+
+**On most home routers:**
+1. In the router admin panel, go to **DHCP Reservations** or **Address Reservation**
+   (the label varies by router brand)
+2. Find your Kasa plug in the list (match by MAC address, shown in the Kasa app under Device Info)
+3. Enter the IP address you want to reserve (e.g. `192.168.1.42`)
+4. Save and reboot the plug by unplugging it and plugging it back in
+5. Confirm the plug comes back online at the reserved IP using `python -m kasa discover`
+
+> **Why this matters:** if you skip static IP assignment, the plug’s IP may change
+> after a router restart and `kasa_smart_home_server.py` will fail to connect
+> until you update `KASA_DEVICE_IP` in `.env`.

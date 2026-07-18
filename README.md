@@ -107,8 +107,8 @@ ch08-model-context-protocol/
 | Key | Needed for | Free tier | Where to get it |
 |---|---|---|---|
 | `GROQ_API_KEY` | Agent client (both options) | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
-| `WEATHER_API_KEY` | §8.3 external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
-| `NEWS_API_KEY` | §8.3 external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
+| `WEATHER_API_KEY` | external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
+| `NEWS_API_KEY` | external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
 | `KASA_DEVICE_IP` | Option B only | N/A | See below |
 | `KASA_DEVICE_ALIAS` | Option B only | N/A | See below |
 

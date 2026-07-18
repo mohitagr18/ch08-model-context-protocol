@@ -225,7 +225,7 @@ flowchart TD
         TOOLS --> KASA_SDK
     end
 
-    PLUG["\ud83d\udd0c TP-Link Kasa\nSmart Plug\n(local network)"]
+    PLUG["TP-Link Kasa\nSmart Plug\n(local network)"]
     ENV[".env\nKASA_DEVICE_IP\nOPENAI_API_KEY"]
 
     U -->|"Natural language command"| REACT
@@ -258,7 +258,7 @@ sequenceDiagram
     participant MCPClient as MultiServerMCPClient
     participant MCPServer as FastMCP Server
     participant Kasa as python-kasa SDK
-    participant Plug as \ud83d\udd0c Smart Plug
+    participant Plug as Smart Plug
 
     Note over User,Plug: STEP 1 — User speaks their wish
     User->>Agent: "Turn on the Smart Plug."

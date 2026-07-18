@@ -33,6 +33,7 @@ Open `.env` and fill in at minimum one LLM key:
 
 ```dotenv
 # Pick one — see API Keys table below for where to get each
+OPENAI_API_KEY="your_openai_key_here"  # default
 GROQ_API_KEY="your_groq_key_here"      # default
 NVIDIA_API_KEY="your_nvidia_key_here"  # fallback if Groq hits rate limits
 ```

@@ -16,7 +16,7 @@ Each diagram is self-contained and can be dropped directly into the correspondin
 
 ```mermaid
 flowchart TD
-    U(["👤 User"])
+    U(["\ud83d\udc64 User"])
     LLM["LLM\nStateless · No undo\nNo validation"]
     T1["Tool A\nRead-only API\n(low risk)"]
     T2["Tool B\nDatabase\ndirect write"]
@@ -46,7 +46,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    U(["👤 User"])
+    U(["\ud83d\udc64 User"])
     LLM["LLM / Agent"]
 
     subgraph MCP_BOUNDARY ["MCP Boundary"]
@@ -199,31 +199,36 @@ sequenceDiagram
 > The full system: two separate processes connected over HTTP via the MCP
 > protocol. The agent process never imports python-kasa; the server process
 > never imports LangGraph. The `.env` file is the only shared secret surface.
+> The client auto-selects the LLM provider at startup: ChatGroq if
+> `GROQ_API_KEY` is set, ChatNVIDIA (llama-3.1-nemotron-nano-8b-v1) if
+> only `NVIDIA_API_KEY` is set.
 
 ```mermaid
 flowchart TD
-    U(["👤 User"])
+    U(["\ud83d\udc64 User"])
 
     subgraph AGENT_SIDE ["Agent Process (client_kasa_workflow.py)"]
         direction TB
-        GROQ["ChatGroq LLM\n(llama-3.1-8b-instant)"]
+        LLM["LLM — auto-selected at startup\nGroq: llama-3.1-8b-instant\nNVIDIA: llama-3.1-nemotron-nano-8b-v1"]
         REACT["LangGraph\nReAct Agent"]
         MCPC["MultiServerMCPClient\nhttp://localhost:8000/mcp"]
-        GROQ <--> REACT
+        LLM <--> REACT
         REACT <--> MCPC
     end
 
-    subgraph SERVER_SIDE ["Server Process (kasa_smart_home_server.py)"]
+    subgraph SERVER_SIDE ["Server Process"]
         direction TB
+        SRVLABEL["kasa_smart_home_server.py (real)\nOR mock_kasa_server.py (no hardware)"]
         FASTMCP["FastMCP Server\n(streamable-http, port 8000)"]
         TOOLS["Registered Tools\n• list_smart_devices\n• turn_device_on\n• turn_device_off\n• get_device_status"]
-        KASA_SDK["python-kasa SDK"]
+        KASA_SDK["python-kasa SDK\n(real server only)"]
+        SRVLABEL --> FASTMCP
         FASTMCP --> TOOLS
         TOOLS --> KASA_SDK
     end
 
-    PLUG["🔌 TP-Link Kasa\nSmart Plug\n(local network)"]
-    ENV[".env\nKASA_DEVICE_IP\nGROQ_API_KEY"]
+    PLUG["\ud83d\udd0c TP-Link Kasa\nSmart Plug\n(local network)"]
+    ENV[".env\nKASA_DEVICE_IP\nGROQ_API_KEY or NVIDIA_API_KEY"]
 
     U -->|"Natural language command"| REACT
     MCPC <-->|"HTTP — MCP protocol"| FASTMCP
@@ -237,13 +242,12 @@ flowchart TD
     style SERVER_SIDE fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
     style PLUG fill:#fef9c3,stroke:#ca8a04
     style ENV fill:#fef9c3,stroke:#ca8a04,stroke-dasharray:4 3
-    style GROQ fill:#3b82f6,color:#fff
+    style LLM fill:#3b82f6,color:#fff
     style FASTMCP fill:#22c55e,color:#fff
 ```
 
 > **Diagram 8.4b — Step-by-Step Request Lifecycle**
 >
-> Derived from the Medium article's play-by-play.
 > Maps the six numbered steps to every participant in the stack.
 > Use this alongside the code walkthrough in §8.4 to show
 > exactly where the MCP protocol boundary sits in the call chain.
@@ -252,11 +256,11 @@ flowchart TD
 sequenceDiagram
     actor User
     participant Agent as ReAct Agent<br/>(client_kasa_workflow.py)
-    participant LLM as ChatGroq LLM
+    participant LLM as LLM<br/>(Groq or NVIDIA)
     participant MCPClient as MultiServerMCPClient
-    participant MCPServer as FastMCP Server<br/>(kasa_smart_home_server.py)
+    participant MCPServer as FastMCP Server
     participant Kasa as python-kasa SDK
-    participant Plug as 🔌 Smart Plug
+    participant Plug as \ud83d\udd0c Smart Plug
 
     Note over User,Plug: STEP 1 — User speaks their wish
     User->>Agent: "Turn on the Smart Plug."
@@ -288,8 +292,7 @@ sequenceDiagram
 > **Diagram 8.4c — Four-Step Workflow: Tool Calls and Return Values**
 >
 > Reference table for the four `agent.ainvoke()` calls in
-> `client_kasa_workflow.py`. Use inline in the manuscript when walking
-> through the demo — faster to read than a state diagram for a linear sequence.
+> `client_kasa_workflow.py`.
 
 | Step | User instruction | Tool called | Return value |
 |------|-----------------|-------------|--------------|
@@ -301,13 +304,12 @@ sequenceDiagram
 > **Diagram 8.4d — MCP Tool Registration and Discovery**
 >
 > How `@mcp.tool()` decorators become a runtime tool manifest and
-> reach the agent. The key insight is that FastMCP's introspection
-> mechanism — not manual wiring — generates the JSON Schema for each
-> tool automatically at server startup (convention over configuration).
+> reach the agent. FastMCP's introspection mechanism — not manual wiring —
+> generates the JSON Schema for each tool automatically at server startup.
 
 ```mermaid
 flowchart LR
-    subgraph SERVER ["kasa_smart_home_server.py"]
+    subgraph SERVER ["kasa_smart_home_server.py / mock_kasa_server.py"]
         DECS["@mcp.tool() decorators\n(4 tools registered)\nlist_smart_devices\nturn_device_on\nturn_device_off\nget_device_status"]
         INTROSPECT["FastMCP introspection\nat server startup:\nreads type hints + docstrings\ngenerates JSON Schema per tool"]
         DECS -->|"decoration"| INTROSPECT
@@ -340,10 +342,6 @@ flowchart LR
 > **Diagram 8.5 — What MCP Enforces vs. What It Does Not**
 >
 > A capstone reference table for the chapter summary.
-> Use this instead of a prose list to give readers a crisp mental model
-> before they move to Chapter 9 (Plant Doctor case study) and
-> Chapter 14 (fail-closed design patterns), both of which build directly
-> on the boundaries introduced here.
 
 | Dimension | What MCP enforces | What MCP does NOT enforce |
 |-----------|-------------------|---------------------------|

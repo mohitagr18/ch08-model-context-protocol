@@ -16,7 +16,7 @@ Each diagram is self-contained and can be dropped directly into the correspondin
 
 ```mermaid
 flowchart TD
-    U(["\ud83d\udc64 User"])
+    U(["User"])
     LLM["LLM\nStateless · No undo\nNo validation"]
     T1["Tool A\nRead-only API\n(low risk)"]
     T2["Tool B\nDatabase\ndirect write"]
@@ -46,7 +46,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    U(["\ud83d\udc64 User"])
+    U(["User"])
     LLM["LLM / Agent"]
 
     subgraph MCP_BOUNDARY ["MCP Boundary"]
@@ -203,7 +203,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    U(["\ud83d\udc64 User"])
+    U(["User"])
 
     subgraph AGENT_SIDE ["Agent Process (client_kasa_workflow.py)"]
         direction TB

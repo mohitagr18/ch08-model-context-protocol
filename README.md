@@ -6,13 +6,26 @@ Code examples for **Chapter 8: The Model Context Protocol (MCP)** from the book.
 
 ## Step 1 — Setup
 
-**1a. Install dependencies**
+**1a. Install uv (if you don’t have it)**
 
 ```bash
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-**1b. Copy the environment file and add your keys**
+On Windows:
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**1b. Create the virtual environment and install all dependencies**
+
+```bash
+uv sync
+```
+
+This reads `pyproject.toml`, creates a `.venv` in the project root, and installs everything in one step.
+
+**1c. Copy the environment file and add your keys**
 
 ```bash
 cp .env.example .env
@@ -45,16 +58,16 @@ Use this if you don’t have a physical Kasa plug. Only `GROQ_API_KEY` is needed
 
 **Terminal 1:**
 ```bash
-python smart_home/mock_kasa_server.py
+uv run python smart_home/mock_kasa_server.py
 ```
 
 **Terminal 2:**
 ```bash
 # Validate the server tools first (no LLM needed)
-python smart_home/test_mock.py
+uv run python smart_home/test_mock.py
 
 # Then run the full agent
-python smart_home/client_kasa_workflow.py
+uv run python smart_home/client_kasa_workflow.py
 ```
 
 ---
@@ -67,12 +80,12 @@ Need help finding them? See [Finding Your Kasa Device IP](#finding-your-kasa-dev
 
 **Terminal 1:**
 ```bash
-python smart_home/kasa_smart_home_server.py
+uv run python smart_home/kasa_smart_home_server.py
 ```
 
 **Terminal 2:**
 ```bash
-python smart_home/client_kasa_workflow.py
+uv run python smart_home/client_kasa_workflow.py
 ```
 
 ---
@@ -95,8 +108,8 @@ ch08-model-context-protocol/
 │   └── README.md
 ├── workflow/
 │   └── workflow.md                # Mermaid diagrams for each section
+├── pyproject.toml
 ├── .env.example
-├── requirements.txt
 └── README.md
 ```
 
@@ -107,8 +120,8 @@ ch08-model-context-protocol/
 | Key | Needed for | Free tier | Where to get it |
 |---|---|---|---|
 | `GROQ_API_KEY` | Agent client (both options) | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
-| `WEATHER_API_KEY` | external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
-| `NEWS_API_KEY` | external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
+| `WEATHER_API_KEY` | §8.3 external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
+| `NEWS_API_KEY` | §8.3 external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |
 | `KASA_DEVICE_IP` | Option B only | N/A | See below |
 | `KASA_DEVICE_ALIAS` | Option B only | N/A | See below |
 
@@ -128,7 +141,7 @@ Three ways to find your plug’s IP and alias, ordered by ease.
 ### Option 2 — python-kasa discovery CLI
 
 ```bash
-python -m kasa discover
+uv run python -m kasa discover
 ```
 
 Example output:
@@ -157,4 +170,4 @@ breaking the value in `.env`.
 2. Match your plug by MAC address (visible in the Kasa app under Device Info)
 3. Reserve a fixed IP (e.g. `192.168.1.42`)
 4. Unplug and replug the device to apply
-5. Confirm with `python -m kasa discover`
+5. Confirm with `uv run python -m kasa discover`

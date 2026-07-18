@@ -34,7 +34,9 @@ network — or a fully simulated mock if you don't have the hardware.
 
 | Key | Used by | Free tier | Where to get it |
 |---|---|---|---|
+| `OPENAI_API_KEY` | `client_kasa_workflow.py` | Yes | [platform.openai.com](https://platform.openai.com/) |
 | `GROQ_API_KEY` | `client_kasa_workflow.py` | Yes — generous free tier | [console.groq.com](https://console.groq.com) |
+| `NVIDIA_API_KEY` | `client_kasa_workflow.py` | Yes — free credits | [build.nvidia.com](https://build.nvidia.com) |
 | `KASA_DEVICE_IP` | `kasa_smart_home_server.py` only | N/A (your device) | Router admin panel |
 | `KASA_DEVICE_ALIAS` | `kasa_smart_home_server.py` only | N/A (your device) | Label on your plug |
 
@@ -45,12 +47,14 @@ network — or a fully simulated mock if you don't have the hardware.
 
 ## Quick Start: Testing Without Hardware
 
-### Step 1 — Add your Groq key to `.env`
+### Step 1 — Add your LLM API key(s) to `.env`
 ```bash
 # .env (in the repo root)
-GROQ_API_KEY=your_key_here
+OPENAI_API_KEY=your_openai_key_here
+# GROQ_API_KEY=your_key_here
+# NVIDIA_API_KEY=your_nvidia_key_here
 ```
-Get a free key at [console.groq.com](https://console.groq.com) → API Keys → Create key.
+Set `OPENAI_API_KEY` for `gpt-5.4-nano`, or use `GROQ_API_KEY` if you prefer Groq. Add `NVIDIA_API_KEY` only as a fallback when the other providers are unavailable.
 
 ### Step 2 — Terminal 1: start the mock server
 ```bash

@@ -33,12 +33,13 @@ Open `.env` and fill in at minimum one LLM key:
 
 ```dotenv
 # Pick one — see API Keys table below for where to get each
-GROQ_API_KEY="your_groq_key_here"      # default
-NVIDIA_API_KEY="your_nvidia_key_here"  # fallback if Groq hits rate limits
+OPENAI_API_KEY="your_openai_key_here"  # default fallback for gpt-5.4-nano
+GROQ_API_KEY="your_groq_key_here"      # secondary
+NVIDIA_API_KEY="your_nvidia_key_here"  # fallback if Groq/OpenAI are unavailable
 ```
 
-The client auto-selects the provider: Groq is used if `GROQ_API_KEY` is set;
-if only `NVIDIA_API_KEY` is set, it switches to `ChatNVIDIA` automatically.
+The client auto-selects the provider: OpenAI is used first if `OPENAI_API_KEY` is set;
+otherwise Groq is used if `GROQ_API_KEY` is set; if neither are present it falls back to `NVIDIA_API_KEY`.
 
 ---
 
@@ -111,7 +112,8 @@ ch08-model-context-protocol/
 
 | Key | Needed for | Free tier | Where to get it |
 |---|---|---|---|
-| `GROQ_API_KEY` | Agent client — default LLM | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
+| `OPENAI_API_KEY` | Agent client — default fallback LLM | Yes | [platform.openai.com](https://platform.openai.com/) → API Keys |
+| `GROQ_API_KEY` | Agent client — secondary LLM | Yes | [console.groq.com](https://console.groq.com) → API Keys → Create key |
 | `NVIDIA_API_KEY` | Agent client — fallback LLM | Yes — free credits | [build.nvidia.com](https://build.nvidia.com) → sign in → Get API Key |
 | `WEATHER_API_KEY` | §8.3 external tools only | Yes — 1M calls/month | [weatherapi.com](https://www.weatherapi.com) → sign up → dashboard |
 | `NEWS_API_KEY` | §8.3 external tools only | Yes — 100 req/day | [newsapi.org](https://newsapi.org) → free developer plan |

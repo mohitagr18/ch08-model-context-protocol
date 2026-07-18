@@ -3,13 +3,6 @@
 This file contains Mermaid diagrams for each section of **Chapter 8: The Model Context Protocol (MCP)**.
 Each diagram is self-contained and can be dropped directly into the corresponding section of the manuscript.
 
-> **Diagram status:** 7 diagrams retained for print. Changes from v1:
-> - **8.1a** — LLM node reframed as stateless/no-undo; irreversibility callout added
-> - **8.4c** — Replaced state diagram with a prose-ready tool/return-value reference table
-> - **8.4d** — Collapsed 4 redundant tool nodes into one; mechanism annotation added
-> - **8.5** — Mindmap replaced with MCP enforcement boundary table (sets up Ch. 9 & Ch. 14)
-
----
 
 ## Section 8.1 — Why Tool Use Needs a Standard Boundary
 
